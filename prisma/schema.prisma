@@ -13,10 +13,32 @@ model User {
   username     String
   avatarUrl    String?    @map("avatar_url")
   bio          String?
-  // isEmailVerified Boolean @default(false) @map("is_email_verified")
+  isEmailVerified Boolean @default(false) @map("is_email_verified")
   passwordHash String     @map("password_hash")
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
 
   @@map("users")
+}
+
+model EmailVerificationCode {
+  id        Int      @id @default(autoincrement())
+  email     String
+  code      String
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  used      Boolean  @default(false)
+
+  @@map("email_verification_codes")
+}
+
+model PasswordResetCode {
+  id        Int      @id @default(autoincrement())
+  email     String
+  code      String
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  used      Boolean  @default(false)
+
+  @@map("password_reset_codes")
 }

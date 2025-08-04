@@ -7,7 +7,7 @@ const port = 3000;
 
 // const publicPath = path.join(process.cwd(), 'public'); 
 
-app.use(googleAuthRouter)
+app.use("/auth", googleAuthRouter)
 app.use("/users", usersRoutes)
 
 app.listen(port, () => {
