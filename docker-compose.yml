@@ -1,0 +1,15 @@
+version: '3.8'
+
+services: 
+  teste-tecnico:
+    image: postgres:15
+    container_name: watchlist-temp-api
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: y1sDI3D6DMmITJ6JPRtvfA
+      POSTGRES_DB: database
+    ports:
+      - "8001:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
