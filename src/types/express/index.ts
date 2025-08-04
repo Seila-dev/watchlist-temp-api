@@ -10,6 +10,3 @@ declare global {
         }
     }
 }
-
-// custom.d.ts
-declare module 'multer-storage-cloudinary';
