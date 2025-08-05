@@ -1,13 +1,13 @@
 import "dotenv/config"
 import { app } from "./app";
 import usersRoutes from "./routes/users-routes";
-import googleAuthRouter from './routes/google-auth-routes'
+import authRouter from './routes/auth-routes'
 
 const port = 3000;
 
 // const publicPath = path.join(process.cwd(), 'public'); 
 
-app.use("/auth", googleAuthRouter)
+app.use("/auth", authRouter)
 app.use("/users", usersRoutes)
 
 app.listen(port, () => {
