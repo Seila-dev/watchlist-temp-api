@@ -5,12 +5,10 @@ import nodemailer from 'nodemailer';
 
 
 export class AuthController {
-    // Gerar código de 6 dígitos
     private generateCode(): string {
         return Math.floor(100000 + Math.random() * 900000).toString();
     }
 
-    // Simular envio de email (substitua pela sua biblioteca de email)
     private async sendEmail(to: string, subject: string, content: string): Promise<void> {
         const transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST,
@@ -29,11 +27,8 @@ export class AuthController {
             text: content,
             html: `<p>${content}</p>`,
         });
-
-        console.log(`📧 Email real enviado para ${to}`);
     }
 
-    // 2. Enviar código para validar email
     async sendVerificationCode(req: Request, res: Response) {
         try {
             const { email } = req.body;
@@ -43,7 +38,6 @@ export class AuthController {
                 return;
             }
 
-            // Verificar se o usuário existe
             const user = await prisma.user.findUnique({
                 where: { email }
             });
@@ -53,15 +47,13 @@ export class AuthController {
                 return;
             }
 
-            // Invalidar códigos anteriores
             await prisma.emailVerificationCode.deleteMany({
                 where: { email }
             });
 
             const code = this.generateCode();
-            const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+            const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10m
 
-            // Salvar código no banco
             await prisma.emailVerificationCode.create({
                 data: {
                     email,
@@ -70,7 +62,6 @@ export class AuthController {
                 }
             });
 
-            // Enviar email
             await this.sendEmail(
                 email,
                 'Código de Verificação',
@@ -84,7 +75,6 @@ export class AuthController {
         }
     }
 
-    // 3. Validar código de verificação de email
     async validateVerificationCode(req: Request, res: Response) {
         try {
             const { email, code } = req.body;
@@ -110,13 +100,11 @@ export class AuthController {
                 return;
             }
 
-            // Marcar código como usado
             await prisma.emailVerificationCode.update({
                 where: { id: verificationCode.id },
                 data: { used: true }
             });
 
-            // Marcar email como verificado
             await prisma.user.update({
                 where: { email },
                 data: { isEmailVerified: true }
@@ -129,7 +117,6 @@ export class AuthController {
         }
     }
 
-    // 4. Enviar código para redefinir senha
     async sendPasswordResetCode(req: Request, res: Response) {
         try {
             const { email } = req.body;
@@ -139,7 +126,6 @@ export class AuthController {
                 return;
             }
 
-            // Verificar se o usuário existe
             const user = await prisma.user.findUnique({
                 where: { email }
             });
@@ -149,15 +135,13 @@ export class AuthController {
                 return;
             }
 
-            // Invalidar códigos anteriores
             await prisma.passwordResetCode.deleteMany({
                 where: { email }
             });
 
             const code = this.generateCode();
-            const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
+            const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15m
 
-            // Salvar código no banco
             await prisma.passwordResetCode.create({
                 data: {
                     email,
@@ -166,7 +150,6 @@ export class AuthController {
                 }
             });
 
-            // Enviar email
             await this.sendEmail(
                 email,
                 'Redefinição de Senha',
@@ -180,7 +163,6 @@ export class AuthController {
         }
     }
 
-    // 5. Validar código para redefinir senha
     async validatePasswordResetCode(req: Request, res: Response) {
         try {
             const { email, code } = req.body;
@@ -213,7 +195,6 @@ export class AuthController {
         }
     }
 
-    // 6. Alterar senha no banco de dados
     async resetPassword(req: Request, res: Response) {
         try {
             const { email, code, newPassword } = req.body;
@@ -223,7 +204,6 @@ export class AuthController {
                 return;
             }
 
-            // Validar código novamente
             const resetCode = await prisma.passwordResetCode.findFirst({
                 where: {
                     email,
@@ -240,16 +220,13 @@ export class AuthController {
                 return;
             }
 
-            // Marcar código como usado
             await prisma.passwordResetCode.update({
                 where: { id: resetCode.id },
                 data: { used: true }
             });
 
-            // Hash da nova senha
             const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-            // Atualizar senha do usuário
             await prisma.user.update({
                 where: { email },
                 data: { passwordHash: hashedPassword }
