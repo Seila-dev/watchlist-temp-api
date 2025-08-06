@@ -8,6 +8,7 @@ app.use(cors({
   origin: [
     'http://localhost:3000',
     'https://your-watchlist.vercel.app',
+    'https://watchlist-app-git-fix-send-code-erick-rodrigues-projects.vercel.app/'
   ],
   credentials: true,
 }));
