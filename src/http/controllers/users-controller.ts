@@ -89,53 +89,49 @@ export class UsersController {
 
     async updateUsername(req: Request, res: Response) {
 
-        const { email, username } = req.body;
+        const { username } = req.body;
+        const userId = req.user?.id;
 
-        if (!email || !username) {
-            res.status(400).json({ message: "Email and username are required" });
+        if (!username) {
+            res.status(400).json({ message: "Username is required" });
+            return;
+        }
+
+        if (!userId) {
+            res.status(401).json({ message: "Unauthorized teste 2" });
             return;
         }
 
         try {
-            const userAlreadyExist = await prisma.user.findUnique({
-                where: { email }
-            })
+            const usernameExists = await prisma.user.findUnique({
+                where: { username },
+            });
 
-            if (!userAlreadyExist) {
-                res.status(404).json({ message: "User not found" });
-                return
+            if (usernameExists) {
+                res.status(409).json({ message: "Username already exists" });
+                return;
             }
-
-            const userNameAlreadyExist = await prisma.user.findUnique({
-                where: { username }
-            })
-
-            if (userNameAlreadyExist) {
-                res.status(409).json({ message: "Username already exists!" });
-                return
-            }
-
 
             const updatedUser = await prisma.user.update({
-                where: { email },
+                where: { id: userId },
                 data: { username },
                 select: {
                     id: true,
                     email: true,
                     username: true,
-                    name: true
-                }
-            })
+                    name: true,
+                },
+            });
 
-            res.json({ message: "Username created successfully", user: updatedUser });
-            return
+            res.status(200).json({ message: "Username updated successfully", user: updatedUser });
+            return;
 
         } catch (error) {
             console.error(error);
-            res.status(500).send({ message: "Internal server error" })
+            res.status(500).json({ message: "Internal server error" });
+            return;
         }
     }
-
 
 
     async profile(req: Request, res: Response) {
