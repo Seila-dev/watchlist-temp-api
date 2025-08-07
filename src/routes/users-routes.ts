@@ -20,6 +20,11 @@ usersRoutes.post(
     new UsersController().login
 )
 
+usersRoutes.post(
+    "/update-username", 
+    new UsersController().updateUsername
+)
+
 usersRoutes.get(
     '/me', 
     authMiddleware, 
