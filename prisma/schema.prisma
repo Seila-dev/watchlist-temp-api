@@ -9,8 +9,9 @@ datasource db {
 
 model User {
   id              Int      @id @default(autoincrement())
+  name            String
+  username        String?  @unique
   email           String   @unique
-  username        String
   avatarUrl       String?  @map("avatar_url")
   bio             String?
   isEmailVerified Boolean  @default(false) @map("is_email_verified")

@@ -6,29 +6,35 @@ import { getCurrentUser } from "../http/controllers/get-current-user-controller"
 const usersRoutes = Router()
 
 usersRoutes.post(
-    "/check-email", 
+    "/check-email",
     new UsersController().checkEmail
 )
 
 usersRoutes.post(
-    "/", 
+    "/",
     new UsersController().create
 )
 
 usersRoutes.post(
-    "/login", 
+    "/login",
     new UsersController().login
 )
 
+usersRoutes.put(
+    "/update-username",
+    authMiddleware,
+    new UsersController().updateUsername
+)
+
 usersRoutes.get(
-    '/me', 
-    authMiddleware, 
+    '/me',
+    authMiddleware,
     getCurrentUser
 )
 
 usersRoutes.get(
-    "/", 
-    authMiddleware, 
+    "/",
+    authMiddleware,
     new UsersController().profile
 )
 
