@@ -6,7 +6,7 @@ const authRoutes = Router();
 const authController = new AuthController();
 
 authRoutes.post(
-    "/", 
+    "/google", 
     googleAuth
 );
 
