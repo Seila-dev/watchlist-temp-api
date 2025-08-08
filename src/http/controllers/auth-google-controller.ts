@@ -35,7 +35,7 @@ export const googleAuth = async (req: Request, res: Response) => {
       user = await prisma.user.create({
         data: {
           email: payload.email,
-          username: payload.name,
+          name: payload.name,
           passwordHash: '', // campo obrigatório, pode deixar vazio ou um valor simbólico
         },
       });
