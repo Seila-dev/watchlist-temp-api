@@ -37,7 +37,13 @@ export const googleAuth = async (req: Request, res: Response) => {
           email: payload.email,
           name: payload.name,
           passwordHash: '', // campo obrigatório, pode deixar vazio ou um valor simbólico
+          isEmailVerified: true, // consideramos que o login via Google já verifica o email
         },
+      });
+    } else if (!user.isEmailVerified) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { isEmailVerified: true },
       });
     }
 
