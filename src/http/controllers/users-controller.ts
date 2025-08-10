@@ -98,7 +98,7 @@ export class UsersController {
         }
 
         if (!userId) {
-            res.status(401).json({ message: "Unauthorized teste 2" });
+            res.status(401).json({ message: "Unauthorized" });
             return;
         }
 
