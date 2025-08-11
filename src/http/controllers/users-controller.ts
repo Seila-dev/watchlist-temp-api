@@ -59,31 +59,31 @@ export class UsersController {
     }
 
     async login(req: Request, res: Response) {
-        const { email, password } = req.body
+        const { email, password } = req.body;
 
         try {
             const user = await prisma.user.findUnique({
-                where: {
-                    email
-                }
-            })
+                where: { email }
+            });
 
-            const secretKey = process.env.SECRET_KEY
-
+            const secretKey = process.env.SECRET_KEY;
             if (!secretKey) {
-                throw new Error('SECRET_KEY is not defined in the environment variables')
+                throw new Error('SECRET_KEY is not defined in environment variables');
             }
 
             if (user && bcrypt.compareSync(password, user.passwordHash)) {
-                const token = jwt.sign({ id: user.id }, secretKey, { expiresIn: '1h' })
-                res.json({ token })
-                return
+                const token = jwt.sign({ id: user.id }, secretKey, { expiresIn: '1h' });
+
+                const { passwordHash, ...safeUser } = user;
+
+                res.json({ token, user: safeUser });
+                return;
             }
 
-            res.status(401).json({ message: "Invalid credentials" })
+            res.status(401).json({ message: "Invalid credentials" });
         } catch (error) {
-            console.error(error)
-            res.status(500).send({ message: "Internal server error" })
+            console.error(error);
+            res.status(500).json({ message: "Internal server error" });
         }
     }
 
