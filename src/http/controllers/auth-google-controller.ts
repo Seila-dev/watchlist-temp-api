@@ -1,32 +1,47 @@
 import { Request, Response } from 'express';
-import { OAuth2Client } from 'google-auth-library';
+import fetch from 'node-fetch';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../../prisma';
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
 export const googleAuth = async (req: Request, res: Response) => {
-  const { token: googleToken } = req.body;
-    console.log('[GOOGLE AUTH REQUEST]', req.body);
+  const { code } = req.body; // agora recebemos o code
+  console.log('[GOOGLE AUTH REQUEST]', req.body);
 
-  if (!googleToken) {
-    res.status(400).json({ message: 'Missing Google token' });
-    return
+  if (!code) {
+    res.status(400).json({ message: 'Missing Google code' });
+    return;
   }
 
   try {
-    const ticket = await client.verifyIdToken({
-      idToken: googleToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
+    // Troca code por tokens
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        redirect_uri: `https://your-watchlist.vercel.app/auth/google/callback`,
+        grant_type: 'authorization_code',
+      }),
     });
 
-    const payload = ticket.getPayload();
-
-    if (!payload?.email || !payload.name) {
-      res.status(400).json({ message: 'Google account missing required data' });
-      return
+    const tokens = await tokenResponse.json();
+    if (!tokens.id_token) {
+      res.status(400).json({ message: 'Failed to get ID token from Google' });
+      return;
     }
 
+    // Decodifica o id_token para pegar info do usuário
+    const base64Payload = tokens.id_token.split('.')[1];
+    const payload = JSON.parse(Buffer.from(base64Payload, 'base64').toString());
+
+    if (!payload.email || !payload.name) {
+      res.status(400).json({ message: 'Google account missing required data' });
+      return;
+    }
+
+    // Procura usuário no DB
     let user = await prisma.user.findUnique({
       where: { email: payload.email },
     });
@@ -36,8 +51,8 @@ export const googleAuth = async (req: Request, res: Response) => {
         data: {
           email: payload.email,
           name: payload.name,
-          passwordHash: '', // campo obrigatório, pode deixar vazio ou um valor simbólico
-          isEmailVerified: true, // consideramos que o login via Google já verifica o email
+          passwordHash: '',
+          isEmailVerified: true,
         },
       });
     } else if (!user.isEmailVerified) {
@@ -47,6 +62,7 @@ export const googleAuth = async (req: Request, res: Response) => {
       });
     }
 
+    // Cria JWT
     const secretKey = process.env.SECRET_KEY!;
     const jwtToken = jwt.sign({ id: user.id, email: user.email }, secretKey, {
       expiresIn: '7d',
@@ -63,6 +79,6 @@ export const googleAuth = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('[GOOGLE AUTH ERROR]', error);
     res.status(500).json({ message: 'Google authentication failed' });
-    return
+    return;
   }
 };
