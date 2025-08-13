@@ -19,7 +19,7 @@ export const googleAuth = async (req: Request, res: Response) => {
         code,
         client_id: process.env.GOOGLE_CLIENT_ID!,
         client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-        redirect_uri: `https://your-watchlist.vercel.app/auth/google/callback`,
+        redirect_uri: process.env.REDIRECT_URI!,
         grant_type: 'authorization_code',
       }),
     });
