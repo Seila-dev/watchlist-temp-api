@@ -1,19 +1,16 @@
 import { Request, Response } from 'express';
-import fetch from 'node-fetch';
 import jwt from 'jsonwebtoken';
+import fetch from 'node-fetch'; // ou use global fetch se Node >=18
 import { prisma } from '../../prisma';
 
 export const googleAuth = async (req: Request, res: Response) => {
-  const { code } = req.body; // agora recebemos o code
-  console.log('[GOOGLE AUTH REQUEST]', req.body);
-
+  const { code } = req.body;
   if (!code) {
-    res.status(400).json({ message: 'Missing Google code' });
-    return;
+    return res.status(400).json({ message: 'Missing Google authorization code' });
   }
 
   try {
-    // Troca code por tokens
+    // Troca o code por tokens
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -26,32 +23,31 @@ export const googleAuth = async (req: Request, res: Response) => {
       }),
     });
 
-    const tokens = await tokenResponse.json();
-    if (!tokens.id_token) {
-      res.status(400).json({ message: 'Failed to get ID token from Google' });
-      return;
+    const tokenData = await tokenResponse.json();
+
+    if (!tokenData.id_token) {
+      console.error('[GOOGLE TOKEN ERROR]', tokenData);
+      return res.status(400).json({ message: 'Failed to get ID token from Google' });
     }
 
-    // Decodifica o id_token para pegar info do usuário
-    const base64Payload = tokens.id_token.split('.')[1];
-    const payload = JSON.parse(Buffer.from(base64Payload, 'base64').toString());
+    // Decodifica o ID token para pegar os dados do usuário
+    const decoded: any = JSON.parse(
+      Buffer.from(tokenData.id_token.split('.')[1], 'base64').toString()
+    );
 
-    if (!payload.email || !payload.name) {
-      res.status(400).json({ message: 'Google account missing required data' });
-      return;
+    if (!decoded.email || !decoded.name) {
+      return res.status(400).json({ message: 'Google account missing required data' });
     }
 
-    // Procura usuário no DB
-    let user = await prisma.user.findUnique({
-      where: { email: payload.email },
-    });
+    // Verifica ou cria usuário no banco
+    let user = await prisma.user.findUnique({ where: { email: decoded.email } });
 
     if (!user) {
       user = await prisma.user.create({
         data: {
-          email: payload.email,
-          name: payload.name,
-          passwordHash: '',
+          email: decoded.email,
+          name: decoded.name,
+          passwordHash: '', // obrigatório, mas vazio
           isEmailVerified: true,
         },
       });
@@ -62,9 +58,8 @@ export const googleAuth = async (req: Request, res: Response) => {
       });
     }
 
-    // Cria JWT
-    const secretKey = process.env.SECRET_KEY!;
-    const jwtToken = jwt.sign({ id: user.id, email: user.email }, secretKey, {
+    // Gera JWT próprio
+    const jwtToken = jwt.sign({ id: user.id, email: user.email }, process.env.SECRET_KEY!, {
       expiresIn: '7d',
     });
 
@@ -75,10 +70,9 @@ export const googleAuth = async (req: Request, res: Response) => {
     });
 
     const { passwordHash, ...safeUser } = user;
-    res.json({ user: safeUser, token: jwtToken });
+    return res.json({ user: safeUser, token: jwtToken });
   } catch (error) {
     console.error('[GOOGLE AUTH ERROR]', error);
-    res.status(500).json({ message: 'Google authentication failed' });
-    return;
+    return res.status(500).json({ message: 'Google authentication failed' });
   }
 };
