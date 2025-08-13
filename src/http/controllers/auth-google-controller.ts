@@ -6,7 +6,8 @@ import { prisma } from '../../prisma';
 export const googleAuth = async (req: Request, res: Response) => {
   const { code } = req.body;
   if (!code) {
-    return res.status(400).json({ message: 'Missing Google authorization code' });
+    res.status(400).json({ message: 'Missing Google authorization code' });
+    return
   }
 
   try {
@@ -27,7 +28,8 @@ export const googleAuth = async (req: Request, res: Response) => {
 
     if (!tokenData.id_token) {
       console.error('[GOOGLE TOKEN ERROR]', tokenData);
-      return res.status(400).json({ message: 'Failed to get ID token from Google' });
+      res.status(400).json({ message: 'Failed to get ID token from Google' });
+      return
     }
 
     // Decodifica o ID token para pegar os dados do usuário
@@ -36,7 +38,8 @@ export const googleAuth = async (req: Request, res: Response) => {
     );
 
     if (!decoded.email || !decoded.name) {
-      return res.status(400).json({ message: 'Google account missing required data' });
+      res.status(400).json({ message: 'Google account missing required data' });
+      return
     }
 
     // Verifica ou cria usuário no banco
@@ -70,9 +73,9 @@ export const googleAuth = async (req: Request, res: Response) => {
     });
 
     const { passwordHash, ...safeUser } = user;
-    return res.json({ user: safeUser, token: jwtToken });
+    res.json({ user: safeUser, token: jwtToken });
   } catch (error) {
     console.error('[GOOGLE AUTH ERROR]', error);
-    return res.status(500).json({ message: 'Google authentication failed' });
+    res.status(500).json({ message: 'Google authentication failed' });
   }
 };
