@@ -1,68 +1,36 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import fetch from 'node-fetch'; // ou global fetch se Node >=18
+import fetch from 'node-fetch'; // ou use global fetch se Node >=18
 import { prisma } from '../../prisma';
 
-const isDev = process.env.NODE_ENV !== 'production';
-
 export const googleAuth = async (req: Request, res: Response) => {
-  const { code, redirectUri } = req.body;
-
-  if (!code || !redirectUri) {
-    res.status(400).json({ message: 'Missing code or redirectUri' });
+  const { code } = req.body;
+  if (!code) {
+    res.status(400).json({ message: 'Missing Google authorization code' });
+    return
   }
 
-  const attemptTokenExchange = async (redirect_to: string) => {
-    const resp = await fetch('https://oauth2.googleapis.com/token', {
+  try {
+    // Troca o code por tokens
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         code,
         client_id: process.env.GOOGLE_CLIENT_ID!,
         client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-        redirect_uri: redirect_to,
+        redirect_uri: process.env.REDIRECT_URI!,
         grant_type: 'authorization_code',
       }),
     });
 
-    const body = await resp.json().catch(() => ({ error: 'invalid_json' }));
-    return { 
-      status: resp.status, 
-      body 
-    };
-  };
+    const tokenData = await tokenResponse.json();
 
-  try {
-    // 1) tenta com a redirectUri enviada pelo cliente (essa deve ser a que foi usada no /auth URL)
-    const primary = await attemptTokenExchange(redirectUri);
-    console.log('[GOOGLE TOKEN TRY] redirectUri=', redirectUri, 'status=', primary.status, 'body=', primary.body);
-
-    // se não veio id_token, e estivermos em dev, tente o redirect registrado no env como diagnóstico
-    if (!primary.body?.id_token && isDev && process.env.REDIRECT_URI) {
-      const fallback = await attemptTokenExchange(process.env.REDIRECT_URI);
-      console.log('[GOOGLE TOKEN FALLBACK] redirectUri=', process.env.REDIRECT_URI, 'status=', fallback.status, 'body=', fallback.body);
-
-      // prefira fallback se ele trouxe id_token
-      if (fallback.body?.id_token) {
-        primary.body = fallback.body;
-      } else {
-        // nenhum trouxe id_token -> devolve erro detalhado em dev para inspecionar
-        console.error('[GOOGLE TOKEN ERROR] primary and fallback failed', primary.body, fallback.body);
-        res.status(400).json({
-          message: 'Failed to get ID token from Google',
-          googlePrimary: primary.body,
-          googleFallback: fallback.body,
-        });
-      }
+    if (!tokenData.id_token) {
+      console.error('[GOOGLE TOKEN ERROR]', tokenData);
+      res.status(400).json({ message: 'Failed to get ID token from Google' });
+      return
     }
-
-    if (!primary.body?.id_token) {
-      console.error('[GOOGLE TOKEN ERROR]', primary.body);
-      // retornar o body do Google para debug (apenas em dev)
-      res.status(400).json({ message: 'Failed to get ID token from Google', google: isDev ? primary.body : undefined });
-    }
-
-    const tokenData = primary.body;
 
     // Decodifica o ID token para pegar os dados do usuário
     const decoded: any = JSON.parse(
@@ -70,7 +38,8 @@ export const googleAuth = async (req: Request, res: Response) => {
     );
 
     if (!decoded.email || !decoded.name) {
-      res.status(400).json({ message: 'Google account missing required data', payload: decoded });
+      res.status(400).json({ message: 'Google account missing required data' });
+      return
     }
 
     // Verifica ou cria usuário no banco
