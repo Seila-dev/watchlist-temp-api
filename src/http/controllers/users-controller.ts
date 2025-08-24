@@ -72,7 +72,7 @@ export class UsersController {
             }
 
             if (user && bcrypt.compareSync(password, user.passwordHash)) {
-                const token = jwt.sign({ id: user.id, username: user.username, emailVerified: user.emailVerified }, secretKey, { expiresIn: '1h' });
+                const token = jwt.sign({ id: user.id, username: user.username, emailVerified: user.isEmailVerified }, secretKey, { expiresIn: '1h' });
 
                 const { passwordHash, ...safeUser } = user;
 
